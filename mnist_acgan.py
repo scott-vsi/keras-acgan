@@ -33,7 +33,8 @@ from six.moves import range
 
 import keras.backend as K
 from keras.datasets import mnist
-from keras.layers import Input, Dense, Reshape, Flatten, Embedding, merge, Dropout
+from keras.layers import Input, Dense, Reshape, Flatten, Embedding, merge, Dropout, Activation
+from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Convolution2D
 from keras.models import Sequential, Model
@@ -57,17 +58,17 @@ def build_generator(latent_size):
 
     # upsample to (..., 14, 14)
     cnn.add(UpSampling2D(size=(2, 2)))
-    cnn.add(Convolution2D(256, 5, 5, border_mode='same',
-                          activation='relu', init='glorot_normal'))
+    cnn.add(Convolution2D(256, 5, 5, border_mode='same', init='glorot_normal'))
+    cnn.add(Activation('relu'))
 
     # upsample to (..., 28, 28)
     cnn.add(UpSampling2D(size=(2, 2)))
-    cnn.add(Convolution2D(128, 5, 5, border_mode='same',
-                          activation='relu', init='glorot_normal'))
+    cnn.add(Convolution2D(128, 5, 5, border_mode='same', init='glorot_normal'))
+    cnn.add(Activation('relu'))
 
     # take a channel axis reduction
-    cnn.add(Convolution2D(1, 2, 2, border_mode='same',
-                          activation='tanh', init='glorot_normal'))
+    cnn.add(Convolution2D(1, 2, 2, border_mode='same', init='glorot_normal'))
+    cnn.add(Activation('tanh'))
 
     # this is the z space commonly refered to in GAN papers
     latent = Input(shape=(latent_size, ))
