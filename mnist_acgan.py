@@ -59,11 +59,13 @@ def build_generator(latent_size):
     # upsample to (..., 14, 14)
     cnn.add(UpSampling2D(size=(2, 2)))
     cnn.add(Convolution2D(256, 5, 5, border_mode='same', init='glorot_normal'))
+    cnn.add(BatchNormalization())
     cnn.add(Activation('relu'))
 
     # upsample to (..., 28, 28)
     cnn.add(UpSampling2D(size=(2, 2)))
     cnn.add(Convolution2D(128, 5, 5, border_mode='same', init='glorot_normal'))
+    cnn.add(BatchNormalization())
     cnn.add(Activation('relu'))
 
     # take a channel axis reduction
@@ -95,18 +97,22 @@ def build_discriminator():
 
     cnn.add(Convolution2D(32, 3, 3, border_mode='same', subsample=(2, 2),
                           input_shape=(1, 28, 28)))
+    cnn.add(BatchNormalization())
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
     cnn.add(Convolution2D(64, 3, 3, border_mode='same', subsample=(1, 1)))
+    cnn.add(BatchNormalization())
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
     cnn.add(Convolution2D(128, 3, 3, border_mode='same', subsample=(2, 2)))
+    cnn.add(BatchNormalization())
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
     cnn.add(Convolution2D(256, 3, 3, border_mode='same', subsample=(1, 1)))
+    cnn.add(BatchNormalization())
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
