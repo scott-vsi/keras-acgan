@@ -125,6 +125,26 @@ def build_discriminator():
 
     return Model(input=image, output=[fake, aux])
 
+def load_data():
+    import os
+    from glob import glob
+    import scipy.misc
+
+    images, labels = [], []
+    for root, dirs, files in os.walk('/like_mnist'):
+      for i,d in enumerate(dirs):
+        for f in glob(os.path.join(root, d, '*.JPEG')):
+          im = scipy.misc.imread(f) # silently requires Pillow...
+          images.append(im)
+          labels.append(i)
+
+    nimages = len(images)
+    inds = np.random.permutation(nimages)
+    images, labels = [images[i] for i in inds], [labels[i] for i in inds]
+    X_train, y_train = np.squeeze(np.stack(images[:int(nimages*0.9)])[:,:,:,0]), labels[:int(nimages*0.9)] # requires numpy > 1.10
+    X_test, y_test = np.squeeze(np.stack(images[int(nimages*0.9):])[:,:,:,0]), labels[int(nimages*0.9):]
+    return (X_train, y_train), (X_test, y_test)
+
 if __name__ == '__main__':
 
     # batch and latent size taken from the paper
@@ -166,7 +186,7 @@ if __name__ == '__main__':
 
     # get our mnist data, and force it to be of shape (..., 1, 28, 28) with
     # range [-1, 1]
-    (X_train, y_train), (X_test, y_test) = mnist.load_data()
+    (X_train, y_train), (X_test, y_test) = load_data()
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
     X_train = np.expand_dims(X_train, axis=1)
 
