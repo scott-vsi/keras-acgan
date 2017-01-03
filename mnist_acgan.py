@@ -49,7 +49,7 @@ K.set_image_dim_ordering('th')
 
 def build_generator(latent_size):
     # we will map a pair of (z, L), where z is a latent vector and L is a
-    # label drawn from P_c, to image space (..., 1, 28, 28)
+    # label drawn from P_c, to image space (..., 3, 28, 28)
     cnn = Sequential()
 
     cnn.add(Dense(1024, input_dim=latent_size, activation='relu'))
@@ -67,7 +67,7 @@ def build_generator(latent_size):
     cnn.add(Activation('relu'))
 
     # take a channel axis reduction
-    cnn.add(Convolution2D(1, 2, 2, border_mode='same', init='glorot_normal'))
+    cnn.add(Convolution2D(3, 2, 2, border_mode='same', init='glorot_normal'))
     cnn.add(Activation('tanh'))
 
     # this is the z space commonly refered to in GAN papers
@@ -88,13 +88,15 @@ def build_generator(latent_size):
     return Model(input=[latent, image_class], output=fake_image)
 
 
-def build_discriminator():
+def build_discriminator(is_pan=True):
     # build a relatively standard conv net, with LeakyReLUs as suggested in
     # the reference paper
+    nb_channels = 1 if is_pan else 3
+
     cnn = Sequential()
 
     cnn.add(Convolution2D(32, 3, 3, border_mode='same', subsample=(2, 2),
-                          input_shape=(1, 28, 28)))
+                          input_shape=(3, 28, 28)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
@@ -112,7 +114,7 @@ def build_discriminator():
 
     cnn.add(Flatten())
 
-    image = Input(shape=(1, 28, 28))
+    image = Input(shape=(nb_channels, 28, 28))
 
     features = cnn(image)
 
@@ -138,11 +140,12 @@ def load_data():
           images.append(im)
           labels.append(i)
 
-    nimages = len(images)
-    inds = np.random.permutation(nimages)
+    nb_images, nb_train = len(images), int(0.9*len(images))
+    inds = np.random.permutation(nb_images)
     images, labels = [images[i] for i in inds], [labels[i] for i in inds]
-    X_train, y_train = np.squeeze(np.stack(images[:int(nimages*0.9)])[:,:,:,0]), labels[:int(nimages*0.9)] # requires numpy > 1.10
-    X_test, y_test = np.squeeze(np.stack(images[int(nimages*0.9):])[:,:,:,0]), labels[int(nimages*0.9):]
+    # requires numpy > 1.10
+    X_train, y_train = np.transpose(np.stack(images[:nb_train]), (0,3,1,2)), labels[:nb_train]
+    X_test, y_test = np.transpose(np.stack(images[nb_train:]), (0,3,1,2)), labels[nb_train:]
     return (X_train, y_train), (X_test, y_test)
 
 if __name__ == '__main__':
@@ -157,7 +160,7 @@ if __name__ == '__main__':
     adam_beta_1 = 0.5
 
     # build the discriminator
-    discriminator = build_discriminator()
+    discriminator = build_discriminator(is_pan=False)
     discriminator.compile(
         optimizer=Adam(lr=adam_lr, beta_1=adam_beta_1),
         loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
@@ -184,14 +187,14 @@ if __name__ == '__main__':
         loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
     )
 
-    # get our mnist data, and force it to be of shape (..., 1, 28, 28) with
+    # get our mnist data, and force it to be of shape (..., 3, 28, 28) with
     # range [-1, 1]
     (X_train, y_train), (X_test, y_test) = load_data()
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-    X_train = np.expand_dims(X_train, axis=1)
+    #X_train = np.expand_dims(X_train, axis=1)
 
     X_test = (X_test.astype(np.float32) - 127.5) / 127.5
-    X_test = np.expand_dims(X_test, axis=1)
+    #X_test = np.expand_dims(X_test, axis=1)
 
     nb_train, nb_test = X_train.shape[0], X_test.shape[0]
 
@@ -201,7 +204,7 @@ if __name__ == '__main__':
     for epoch in range(nb_epochs):
         print('Epoch {} of {}'.format(epoch + 1, nb_epochs))
 
-        nb_batches = int(X_train.shape[0] / batch_size)
+        nb_batches = int(nb_train / batch_size)
         progress_bar = Progbar(target=nb_batches)
 
         epoch_gen_loss = []
@@ -319,10 +322,12 @@ if __name__ == '__main__':
         generated_images = generator.predict(
             [noise, sampled_labels], verbose=0)
 
+        def deck(tensor):
+            nb_batch = tensor.shape[0]
+            return np.squeeze(np.concatenate(np.split(tensor, nb_batch, axis=0), axis=2))
         # arrange them into a grid
-        img = (np.concatenate([r.reshape(-1, 28)
-                               for r in np.split(generated_images, 10)
-                               ], axis=-1) * 127.5 + 127.5).astype(np.uint8)
+        img = np.transpose((np.concatenate([deck(r) for r in np.split(generated_images, 10)],
+                               axis=-1) * 127.5 + 127.5).astype(np.uint8), (1,2,0))
 
         Image.fromarray(img).save(
             'plot_epoch_{0:03d}_generated.png'.format(epoch))
