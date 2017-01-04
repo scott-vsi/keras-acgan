@@ -322,12 +322,20 @@ if __name__ == '__main__':
         generated_images = generator.predict(
             [noise, sampled_labels], verbose=0)
 
-        def deck(tensor):
-            nb_batch = tensor.shape[0]
-            return np.squeeze(np.concatenate(np.split(tensor, nb_batch, axis=0), axis=2))
+        def make_pixel_interleaved(band_interleaved_image):
+            return np.transpose(band_interleaved_image, (1,2,0))
+        def make_grid(tensor, ncols=10):
+            nb_images = tensor.shape[0]
+            tensor = np.pad(tensor, pad_width=[(0,np.mod(nb_images, ncols))]+[(0,0)]*3,
+                    mode='constant', constant_values=0)
+            def make_col(images):
+                nb_images = images.shape[0]
+                return np.squeeze(np.concatenate(np.split(images, nb_images, axis=0), axis=2))
+            return np.concatenate([make_col(r) for r in np.split(tensor, ncols)], axis=-1)
+
         # arrange them into a grid
-        img = np.transpose((np.concatenate([deck(r) for r in np.split(generated_images, 10)],
-                               axis=-1) * 127.5 + 127.5).astype(np.uint8), (1,2,0))
+        img = make_pixel_interleaved(make_grid(
+            (generated_images * 127.5 + 127.5).astype(np.uint8))) 
 
         Image.fromarray(img).save(
             'plot_epoch_{0:03d}_generated.png'.format(epoch))
