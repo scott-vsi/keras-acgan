@@ -49,7 +49,7 @@ K.set_image_dim_ordering('th')
 
 def build_generator(latent_size):
     # we will map a pair of (z, L), where z is a latent vector and L is a
-    # label drawn from P_c, to image space (..., 3, 28, 28)
+    # label drawn from P_c, to image space (..., 3, 56, 56)
     cnn = Sequential()
 
     cnn.add(Dense(1024, input_dim=latent_size, activation='relu'))
@@ -64,6 +64,11 @@ def build_generator(latent_size):
     # upsample to (..., 28, 28)
     cnn.add(UpSampling2D(size=(2, 2)))
     cnn.add(Convolution2D(128, 5, 5, border_mode='same', init='glorot_normal'))
+    cnn.add(Activation('relu'))
+
+    # upsample to (..., 56, 56)
+    cnn.add(UpSampling2D(size=(2, 2)))
+    cnn.add(Convolution2D(64, 5, 5, border_mode='same', init='glorot_normal'))
     cnn.add(Activation('relu'))
 
     # take a channel axis reduction
@@ -95,26 +100,34 @@ def build_discriminator(is_pan=True):
 
     cnn = Sequential()
 
-    cnn.add(Convolution2D(32, 3, 3, border_mode='same', subsample=(2, 2),
-                          input_shape=(3, 28, 28)))
+    cnn.add(Convolution2D(16, 3, 3, border_mode='same', subsample=(2, 2),
+                          input_shape=(3, 56, 56)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
-    cnn.add(Convolution2D(64, 3, 3, border_mode='same', subsample=(1, 1)))
+    cnn.add(Convolution2D(32, 3, 3, border_mode='same', subsample=(1, 1)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
-    cnn.add(Convolution2D(128, 3, 3, border_mode='same', subsample=(2, 2)))
+    cnn.add(Convolution2D(64, 3, 3, border_mode='same', subsample=(2, 2)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
-    cnn.add(Convolution2D(256, 3, 3, border_mode='same', subsample=(1, 1)))
+    cnn.add(Convolution2D(128, 3, 3, border_mode='same', subsample=(1, 1)))
+    cnn.add(LeakyReLU())
+    cnn.add(Dropout(0.3))
+
+    cnn.add(Convolution2D(256, 3, 3, border_mode='same', subsample=(2, 2)))
+    cnn.add(LeakyReLU())
+    cnn.add(Dropout(0.3))
+
+    cnn.add(Convolution2D(512, 3, 3, border_mode='same', subsample=(1, 1)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
     cnn.add(Flatten())
 
-    image = Input(shape=(nb_channels, 28, 28))
+    image = Input(shape=(nb_channels, 56, 56))
 
     features = cnn(image)
 
@@ -133,7 +146,7 @@ def load_data():
     import scipy.misc
 
     images, labels = [], []
-    for root, dirs, files in os.walk('/like_mnist'):
+    for root, dirs, files in os.walk('/like_mnist@2x'):
       for i,d in enumerate(dirs):
         for f in glob(os.path.join(root, d, '*.JPEG')):
           im = scipy.misc.imread(f) # silently requires Pillow...
@@ -187,7 +200,7 @@ if __name__ == '__main__':
         loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
     )
 
-    # get our mnist data, and force it to be of shape (..., 3, 28, 28) with
+    # get our mnist data, and force it to be of shape (..., 3, 56, 56) with
     # range [-1, 1]
     (X_train, y_train), (X_test, y_test) = load_data()
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
