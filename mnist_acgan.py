@@ -141,9 +141,15 @@ def build_discriminator(is_pan=True):
     return Model(input=image, output=[fake, aux])
 
 def load_data():
-    import os
+    import os, os.path as path
     from glob import glob
     import scipy.misc
+    #import sklearn.preprocessing
+
+    #files = glob('/like_mnist@2x/*/*.JPEG')
+    #labels = sklearn.preprocessing.LabelEncoder().fit_transform(
+    #    [path.split(path.split(f)[0])[1] for f in files])
+    #images = [scipy.misc.imread(f) for f in files] # silently requires Pillow...
 
     images, labels = [], []
     for root, dirs, files in os.walk('/like_mnist@2x'):
