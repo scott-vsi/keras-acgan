@@ -140,7 +140,7 @@ def build_discriminator(is_pan=True):
 
     return Model(input=image, output=[fake, aux])
 
-def load_data():
+def load_data(nb_images=None):
     import os, os.path as path
     from glob import glob
     import scipy.misc
@@ -151,17 +151,20 @@ def load_data():
     #    [path.split(path.split(f)[0])[1] for f in files])
     #images = [scipy.misc.imread(f) for f in files] # silently requires Pillow...
 
-    images, labels = [], []
+    filenames, labels = [], []
     for root, dirs, files in os.walk('/like_mnist@2x'):
       for i,d in enumerate(dirs):
         for f in glob(os.path.join(root, d, '*.JPEG')):
-          im = scipy.misc.imread(f) # silently requires Pillow...
-          images.append(im)
+          filenames.append(f)
           labels.append(i)
 
-    nb_images, nb_train = len(images), int(0.9*len(images))
-    inds = np.random.permutation(nb_images)
-    images, labels = [images[i] for i in inds], [labels[i] for i in inds]
+    if nb_images is None or nb_images is np.inf: nb_images = len(filenames)
+
+    inds = np.random.permutation(len(filenames))[:nb_images]
+    filenames, labels = [filenames[i] for i in inds], [labels[i] for i in inds]
+
+    images = [scipy.misc.imread(f) for f in filenames] # silently requires Pillow...
+    nb_train = int(0.9*nb_images)
     # requires numpy > 1.10
     X_train, y_train = np.transpose(np.stack(images[:nb_train]), (0,3,1,2)), labels[:nb_train]
     X_test, y_test = np.transpose(np.stack(images[nb_train:]), (0,3,1,2)), labels[nb_train:]
