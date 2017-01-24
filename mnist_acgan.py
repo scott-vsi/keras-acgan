@@ -140,12 +140,18 @@ def build_discriminator(is_pan=True):
 
     return Model(input=image, output=[fake, aux])
 
-def load_data(nb_images=None):
+def load_data(nb_images=None, nb_images_per_label=None):
+    # nb_images : number of images to load
+    # nb_images_per_label : number of images per label to load
+    # if nb_images is set and nb_images_per_label is None, images are drawn
+    # from categories in proportion to their frequency in the dataset.
+    # if nb_images_per_label is set and nb_images is None, the categories
+    # are re-ballanced
     import os, os.path as path
     from glob import glob
     import scipy.misc
-    #import sklearn.preprocessing
 
+    #import sklearn.preprocessing
     #files = glob('/like_mnist@2x/*/*.JPEG')
     #labels = sklearn.preprocessing.LabelEncoder().fit_transform(
     #    [path.split(path.split(f)[0])[1] for f in files])
@@ -153,18 +159,16 @@ def load_data(nb_images=None):
 
     filenames, labels = [], []
     for root, dirs, files in os.walk('/like_mnist@2x'):
-      for i,d in enumerate(dirs):
-        for f in glob(os.path.join(root, d, '*.JPEG')):
-          filenames.append(f)
-          labels.append(i)
-
-    if nb_images is None or nb_images is np.inf: nb_images = len(filenames)
+        for i,d in enumerate(dirs):
+            files = np.random.permutation(glob(path.join(root, d, '*.JPEG')))
+            filenames.extend(files[:nb_images_per_label])
+            labels.extend([i]*len(files[:nb_images_per_label]))
 
     inds = np.random.permutation(len(filenames))[:nb_images]
     filenames, labels = [filenames[i] for i in inds], [labels[i] for i in inds]
 
     images = [scipy.misc.imread(f) for f in filenames] # silently requires Pillow...
-    nb_train = int(0.9*nb_images)
+    nb_train = int(0.9*len(filenames))
     # requires numpy > 1.10
     X_train, y_train = np.transpose(np.stack(images[:nb_train]), (0,3,1,2)), labels[:nb_train]
     X_test, y_test = np.transpose(np.stack(images[nb_train:]), (0,3,1,2)), labels[nb_train:]
