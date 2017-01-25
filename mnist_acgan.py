@@ -47,9 +47,12 @@ np.random.seed(1337)
 K.set_image_dim_ordering('th')
 
 
-def build_generator(latent_size):
+def build_generator(latent_size, is_pan=False):
     # we will map a pair of (z, L), where z is a latent vector and L is a
     # label drawn from P_c, to image space (..., 3, 56, 56)
+
+    nb_channels = 1 if is_pan else 3
+
     cnn = Sequential()
 
     cnn.add(Dense(1024, input_dim=latent_size, activation='relu'))
@@ -72,7 +75,7 @@ def build_generator(latent_size):
     cnn.add(Activation('relu'))
 
     # take a channel axis reduction
-    cnn.add(Convolution2D(3, 2, 2, border_mode='same', init='glorot_normal'))
+    cnn.add(Convolution2D(nb_channels, 2, 2, border_mode='same', init='glorot_normal'))
     cnn.add(Activation('tanh'))
 
     # this is the z space commonly refered to in GAN papers
@@ -93,15 +96,16 @@ def build_generator(latent_size):
     return Model(input=[latent, image_class], output=fake_image)
 
 
-def build_discriminator(is_pan=True):
+def build_discriminator(is_pan=False):
     # build a relatively standard conv net, with LeakyReLUs as suggested in
     # the reference paper
+
     nb_channels = 1 if is_pan else 3
 
     cnn = Sequential()
 
     cnn.add(Convolution2D(16, 3, 3, border_mode='same', subsample=(2, 2),
-                          input_shape=(3, 56, 56)))
+                          input_shape=(nb_channels, 56, 56)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
@@ -140,7 +144,7 @@ def build_discriminator(is_pan=True):
 
     return Model(input=image, output=[fake, aux])
 
-def load_data(nb_images=None, nb_images_per_label=None):
+def load_data(nb_images=None, nb_images_per_label=None, is_pan=False):
     # nb_images : number of images to load
     # nb_images_per_label : number of images per label to load
     # if nb_images is set and nb_images_per_label is None, images are drawn
@@ -167,7 +171,7 @@ def load_data(nb_images=None, nb_images_per_label=None):
     inds = np.random.permutation(len(filenames))[:nb_images]
     filenames, labels = [filenames[i] for i in inds], [labels[i] for i in inds]
 
-    images = [scipy.misc.imread(f) for f in filenames] # silently requires Pillow...
+    images = [scipy.misc.imread(f, mode='P' if is_pan else 'RGB') for f in filenames] # silently requires Pillow...
     nb_train = int(0.9*len(filenames))
     # requires numpy > 1.10
     X_train, y_train = np.transpose(np.stack(images[:nb_train]), (0,3,1,2)), labels[:nb_train]
@@ -184,16 +188,17 @@ if __name__ == '__main__':
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
     adam_lr = 0.0002
     adam_beta_1 = 0.5
+    is_pan = False
 
     # build the discriminator
-    discriminator = build_discriminator(is_pan=False)
+    discriminator = build_discriminator(is_pan=is_pan)
     discriminator.compile(
         optimizer=Adam(lr=adam_lr, beta_1=adam_beta_1),
         loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
     )
 
     # build the generator
-    generator = build_generator(latent_size)
+    generator = build_generator(latent_size, is_pan=is_pan)
     generator.compile(optimizer=Adam(lr=adam_lr, beta_1=adam_beta_1),
                       loss='binary_crossentropy')
 
@@ -215,12 +220,12 @@ if __name__ == '__main__':
 
     # get our mnist data, and force it to be of shape (..., 3, 56, 56) with
     # range [-1, 1]
-    (X_train, y_train), (X_test, y_test) = load_data()
+    (X_train, y_train), (X_test, y_test) = load_data(is_pan=is_pan)
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-    #X_train = np.expand_dims(X_train, axis=1)
+    if is_pan: X_train = np.expand_dims(X_train, axis=1)
 
     X_test = (X_test.astype(np.float32) - 127.5) / 127.5
-    #X_test = np.expand_dims(X_test, axis=1)
+    if is_pan: X_test = np.expand_dims(X_test, axis=1)
 
     nb_train, nb_test = X_train.shape[0], X_test.shape[0]
 
@@ -360,10 +365,10 @@ if __name__ == '__main__':
             return np.concatenate([make_col(r) for r in np.split(tensor, ncols)], axis=-1)
 
         # arrange them into a grid
-        img = make_pixel_interleaved(make_grid(
-            (generated_images * 127.5 + 127.5).astype(np.uint8))) 
+        im_grid = make_grid((generated_images * 127.5 + 127.5).astype(np.uint8))
+        if not is_pan: im_grid = make_pixel_interleaved(im_grid)
 
-        Image.fromarray(img).save(
+        Image.fromarray(im_grid).save(
             'plot_epoch_{0:03d}_generated.png'.format(epoch))
 
     pickle.dump({'train': train_history, 'test': test_history},
