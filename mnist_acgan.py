@@ -151,6 +151,8 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False):
     # from categories in proportion to their frequency in the dataset.
     # if nb_images_per_label is set and nb_images is None, the categories
     # are re-ballanced
+    # is_pan : data conforms to the mnist data shape
+
     import os, os.path as path
     from glob import glob
     import scipy.misc
@@ -172,10 +174,17 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False):
     filenames, labels = [filenames[i] for i in inds], [labels[i] for i in inds]
 
     images = [scipy.misc.imread(f, mode='P' if is_pan else 'RGB') for f in filenames] # silently requires Pillow...
-    nb_train = int(0.9*len(filenames))
+
     # requires numpy > 1.10
-    X_train, y_train = np.transpose(np.stack(images[:nb_train]), (0,3,1,2)), labels[:nb_train]
-    X_test, y_test = np.transpose(np.stack(images[nb_train:]), (0,3,1,2)), labels[nb_train:]
+    nb_train = int(0.9*len(filenames))
+    X_train, y_train = np.stack(images[:nb_train]), labels[:nb_train]
+    X_test, y_test = np.stack(images[nb_train:]), labels[nb_train:]
+
+    def make_band_interleaved(pixel_interleaved_image):
+        # nbands, nrows, ncols, nchannels
+        return np.transpose(pixel_interleaved_image, (0,3,1,2))
+    if not is_pan: X_train, X_test = map(make_band_interleaved, [X_train, X_test])
+
     return (X_train, y_train), (X_test, y_test)
 
 if __name__ == '__main__':
