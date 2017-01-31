@@ -166,7 +166,7 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False, im_size=56
     #images = [misc.imread(f) for f in files] # silently requires Pillow...
 
     filenames, labels = [], []
-    for root, dirs, files in os.walk('/like_mnist@2x'):
+    for root, dirs, files in os.walk('/data/by_yaw'):
         for i,d in enumerate(dirs):
             files = np.random.permutation(glob(path.join(root, d, '*.JPEG')))
             filenames.extend(files[:nb_images_per_label])
