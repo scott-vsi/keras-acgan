@@ -52,7 +52,7 @@ def build_generator(latent_size, is_pan=False, im_size=28):
     # label drawn from P_c, to image space (..., 3, 56, 56)
 
     nb_channels = 1 if is_pan else 3
-    upsampling_factor = 8 # 2**number of UpSamplings
+    upsampling_factor = 4 # 2**number of UpSamplings
     lowrez = im_size // upsampling_factor
 
     cnn = Sequential()
@@ -72,9 +72,9 @@ def build_generator(latent_size, is_pan=False, im_size=28):
     cnn.add(Activation('relu'))
 
     # upsample to (..., 56, 56)
-    cnn.add(UpSampling2D(size=(2, 2)))
-    cnn.add(Convolution2D(64, 5, 5, border_mode='same', init='glorot_normal'))
-    cnn.add(Activation('relu'))
+    #cnn.add(UpSampling2D(size=(2, 2)))
+    #cnn.add(Convolution2D(64, 5, 5, border_mode='same', init='glorot_normal'))
+    #cnn.add(Activation('relu'))
 
     # take a channel axis reduction
     cnn.add(Convolution2D(nb_channels, 2, 2, border_mode='same', init='glorot_normal'))
