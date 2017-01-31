@@ -201,7 +201,7 @@ if __name__ == '__main__':
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
     adam_lr = 0.0002
     adam_beta_1 = 0.5
-    is_pan = True
+    is_pan = False
 
     # build the discriminator
     discriminator = build_discriminator(is_pan=is_pan)
@@ -233,8 +233,11 @@ if __name__ == '__main__':
 
     # get our mnist data, and force it to be of shape (..., 3, 56, 56) with
     # range [-1, 1]
-    (X_train, y_train), (X_test, y_test) = load_data(is_pan=is_pan, im_size=28)
-    #(X_train, y_train), (X_test, y_test) = mnist.load_data()
+    #(X_train, y_train), (X_test, y_test) = load_data(is_pan=is_pan, im_size=28)
+    (X_train, y_train), (X_test, y_test) = mnist.load_data()
+    # for mnist - make color
+    X_train, X_test = map(lambda c: np.stack([c]*3, axis=1), [X_train, X_test])
+
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
     if is_pan: X_train = np.expand_dims(X_train, axis=1)
 
