@@ -47,17 +47,19 @@ np.random.seed(1337)
 K.set_image_dim_ordering('th')
 
 
-def build_generator(latent_size, is_pan=False):
+def build_generator(latent_size, is_pan=False, im_size=28):
     # we will map a pair of (z, L), where z is a latent vector and L is a
     # label drawn from P_c, to image space (..., 3, 56, 56)
 
     nb_channels = 1 if is_pan else 3
+    upsampling_factor = 4 # 2**number of UpSamplings
+    lowrez = im_size // upsampling_factor
 
     cnn = Sequential()
 
     cnn.add(Dense(1024, input_dim=latent_size, activation='relu'))
-    cnn.add(Dense(128 * 7 * 7, activation='relu'))
-    cnn.add(Reshape((128, 7, 7)))
+    cnn.add(Dense(128 * lowrez * lowrez, activation='relu'))
+    cnn.add(Reshape((128, lowrez, lowrez)))
 
     # upsample to (..., 14, 14)
     cnn.add(UpSampling2D(size=(2, 2)))
@@ -70,9 +72,9 @@ def build_generator(latent_size, is_pan=False):
     cnn.add(Activation('relu'))
 
     # upsample to (..., 56, 56)
-    cnn.add(UpSampling2D(size=(2, 2)))
-    cnn.add(Convolution2D(64, 5, 5, border_mode='same', init='glorot_normal'))
-    cnn.add(Activation('relu'))
+    #cnn.add(UpSampling2D(size=(2, 2)))
+    #cnn.add(Convolution2D(64, 5, 5, border_mode='same', init='glorot_normal'))
+    #cnn.add(Activation('relu'))
 
     # take a channel axis reduction
     cnn.add(Convolution2D(nb_channels, 2, 2, border_mode='same', init='glorot_normal'))
@@ -96,7 +98,7 @@ def build_generator(latent_size, is_pan=False):
     return Model(input=[latent, image_class], output=fake_image)
 
 
-def build_discriminator(is_pan=False):
+def build_discriminator(is_pan=False, im_size=28, nb_kernels=32):
     # build a relatively standard conv net, with LeakyReLUs as suggested in
     # the reference paper
 
@@ -104,34 +106,34 @@ def build_discriminator(is_pan=False):
 
     cnn = Sequential()
 
-    cnn.add(Convolution2D(16, 3, 3, border_mode='same', subsample=(2, 2),
-                          input_shape=(nb_channels, 56, 56)))
+    cnn.add(Convolution2D(nb_kernels*1, 3, 3, border_mode='same', subsample=(2, 2),
+                          input_shape=(nb_channels, im_size, im_size)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
-    cnn.add(Convolution2D(32, 3, 3, border_mode='same', subsample=(1, 1)))
+    cnn.add(Convolution2D(nb_kernels*2, 3, 3, border_mode='same', subsample=(1, 1)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
-    cnn.add(Convolution2D(64, 3, 3, border_mode='same', subsample=(2, 2)))
+    cnn.add(Convolution2D(nb_kernels*4, 3, 3, border_mode='same', subsample=(2, 2)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
-    cnn.add(Convolution2D(128, 3, 3, border_mode='same', subsample=(1, 1)))
+    cnn.add(Convolution2D(nb_kernels*8, 3, 3, border_mode='same', subsample=(1, 1)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
-    cnn.add(Convolution2D(256, 3, 3, border_mode='same', subsample=(2, 2)))
-    cnn.add(LeakyReLU())
-    cnn.add(Dropout(0.3))
+    #cnn.add(Convolution2D(nb_kernels*16, 3, 3, border_mode='same', subsample=(2, 2)))
+    #cnn.add(LeakyReLU())
+    #cnn.add(Dropout(0.3))
 
-    cnn.add(Convolution2D(512, 3, 3, border_mode='same', subsample=(1, 1)))
-    cnn.add(LeakyReLU())
-    cnn.add(Dropout(0.3))
+    #cnn.add(Convolution2D(nb_kernels*32, 3, 3, border_mode='same', subsample=(1, 1)))
+    #cnn.add(LeakyReLU())
+    #cnn.add(Dropout(0.3))
 
     cnn.add(Flatten())
 
-    image = Input(shape=(nb_channels, 56, 56))
+    image = Input(shape=(nb_channels, im_size, im_size))
 
     features = cnn(image)
 
@@ -144,7 +146,7 @@ def build_discriminator(is_pan=False):
 
     return Model(input=image, output=[fake, aux])
 
-def load_data(nb_images=None, nb_images_per_label=None, is_pan=False):
+def load_data(nb_images=None, nb_images_per_label=None, is_pan=False, im_size=56):
     # nb_images : number of images to load
     # nb_images_per_label : number of images per label to load
     # if nb_images is set and nb_images_per_label is None, images are drawn
@@ -155,13 +157,13 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False):
 
     import os, os.path as path
     from glob import glob
-    import scipy.misc
+    import scipy.misc as misc
 
     #import sklearn.preprocessing
     #files = glob('/like_mnist@2x/*/*.JPEG')
     #labels = sklearn.preprocessing.LabelEncoder().fit_transform(
     #    [path.split(path.split(f)[0])[1] for f in files])
-    #images = [scipy.misc.imread(f) for f in files] # silently requires Pillow...
+    #images = [misc.imread(f) for f in files] # silently requires Pillow...
 
     filenames, labels = [], []
     for root, dirs, files in os.walk('/like_mnist@2x'):
@@ -173,7 +175,9 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False):
     inds = np.random.permutation(len(filenames))[:nb_images]
     filenames, labels = [filenames[i] for i in inds], [labels[i] for i in inds]
 
-    images = [scipy.misc.imread(f, mode='P' if is_pan else 'RGB') for f in filenames] # silently requires Pillow...
+    # silently requires Pillow...
+    images = [misc.imread(f, mode='P' if is_pan else 'RGB') for f in filenames]
+    images = [misc.imresize(im, size=(im_size,im_size), interp='bicubic') for im in images]
 
     # requires numpy > 1.10
     nb_train = int(0.9*len(filenames))
@@ -197,7 +201,7 @@ if __name__ == '__main__':
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
     adam_lr = 0.0002
     adam_beta_1 = 0.5
-    is_pan = False
+    is_pan = True
 
     # build the discriminator
     discriminator = build_discriminator(is_pan=is_pan)
@@ -229,7 +233,8 @@ if __name__ == '__main__':
 
     # get our mnist data, and force it to be of shape (..., 3, 56, 56) with
     # range [-1, 1]
-    (X_train, y_train), (X_test, y_test) = load_data(is_pan=is_pan)
+    #(X_train, y_train), (X_test, y_test) = load_data(is_pan=is_pan)
+    (X_train, y_train), (X_test, y_test) = mnist.load_data()
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
     if is_pan: X_train = np.expand_dims(X_train, axis=1)
 
