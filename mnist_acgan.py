@@ -158,6 +158,7 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False, im_size=56
     import os, os.path as path
     from glob import glob
     import scipy.misc as misc
+    import itertools as it
 
     #import sklearn.preprocessing
     #files = glob('/like_mnist@2x/*/*.JPEG')
@@ -165,12 +166,15 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False, im_size=56
     #    [path.split(path.split(f)[0])[1] for f in files])
     #images = [misc.imread(f) for f in files] # silently requires Pillow...
 
-    filenames, labels = [], []
+    filenames = []
     for root, dirs, files in os.walk('/data/by_yaw'):
-        for i,d in enumerate(dirs):
-            files = np.random.permutation(glob(path.join(root, d, '*.JPEG')))
-            filenames.extend(files[:nb_images_per_label])
-            labels.extend([i]*len(files[:nb_images_per_label]))
+        if dirs != []: continue # HACKY use walkdir
+        files = [path.join(root, f) for f in files if '.JPEG' in f]
+        files = np.random.permutation(files)
+        filenames.append(files[:nb_images_per_label])
+
+    labels = list(it.chain.from_iterable([[i]*len(lst) for i,lst in enumerate(filenames)]))
+    filenames = list(it.chain.from_iterable(filenames))
 
     inds = np.random.permutation(len(filenames))[:nb_images]
     filenames, labels = [filenames[i] for i in inds], [labels[i] for i in inds]
