@@ -64,13 +64,11 @@ def build_generator(latent_size, is_pan=False, im_size=28):
     # upsample to (..., 14, 14)
     cnn.add(UpSampling2D(size=(2, 2)))
     cnn.add(Convolution2D(256, 5, 5, border_mode='same', init='glorot_normal'))
-    cnn.add(BatchNormalization())
     cnn.add(Activation('relu'))
 
     # upsample to (..., 28, 28)
     cnn.add(UpSampling2D(size=(2, 2)))
     cnn.add(Convolution2D(128, 5, 5, border_mode='same', init='glorot_normal'))
-    cnn.add(BatchNormalization())
     cnn.add(Activation('relu'))
 
     # upsample to (..., 56, 56)
@@ -114,17 +112,14 @@ def build_discriminator(is_pan=False, im_size=28, nb_kernels=32):
     cnn.add(Dropout(0.3))
 
     cnn.add(Convolution2D(nb_kernels*2, 3, 3, border_mode='same', subsample=(1, 1)))
-    cnn.add(BatchNormalization())
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
     cnn.add(Convolution2D(nb_kernels*4, 3, 3, border_mode='same', subsample=(2, 2)))
-    cnn.add(BatchNormalization())
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
     cnn.add(Convolution2D(nb_kernels*8, 3, 3, border_mode='same', subsample=(1, 1)))
-    cnn.add(BatchNormalization())
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
