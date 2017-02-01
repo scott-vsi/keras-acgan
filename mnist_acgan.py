@@ -37,6 +37,7 @@ from keras.layers import Input, Dense, Reshape, Flatten, Embedding, merge, Dropo
 from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Convolution2D
+from keras.layers.noise import GaussianNoise
 from keras.models import Sequential, Model
 from keras.optimizers import Adam
 from keras.utils.generic_utils import Progbar
@@ -106,8 +107,9 @@ def build_discriminator(is_pan=False, im_size=28, nb_kernels=32):
 
     cnn = Sequential()
 
-    cnn.add(Convolution2D(nb_kernels*1, 3, 3, border_mode='same', subsample=(2, 2),
-                          input_shape=(nb_channels, im_size, im_size)))
+    cnn.add(GaussianNoise(0.04, input_shape=(nb_channels, im_size, im_size)))
+
+    cnn.add(Convolution2D(nb_kernels*1, 3, 3, border_mode='same', subsample=(2, 2)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
