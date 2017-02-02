@@ -240,7 +240,7 @@ if __name__ == '__main__':
 
     # get our mnist data, and force it to be of shape (..., 3, 56, 56) with
     # range [-1, 1]
-    (X_train, y_train), (X_test, y_test) = load_data(is_pan=is_pan)
+    (X_train, y_train), (X_test, y_test) = load_data(is_pan=is_pan, nb_images_per_label=10000)
     #(X_train, y_train), (X_test, y_test) = mnist.load_data()
 
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
