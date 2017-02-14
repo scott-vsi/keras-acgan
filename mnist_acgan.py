@@ -192,7 +192,7 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False, im_size=56
     X_test, y_test = np.stack(images[nb_train:]), labels[nb_train:]
 
     def make_band_interleaved(pixel_interleaved_image):
-        # nbands, nrows, ncols, nchannels
+        # nimages, nrows, ncols, nchannels
         return np.transpose(pixel_interleaved_image, (0,3,1,2))
     if not is_pan: X_train, X_test = map(make_band_interleaved, [X_train, X_test])
 
@@ -376,6 +376,7 @@ if __name__ == '__main__':
             [noise, sampled_labels], verbose=0)
 
         def make_pixel_interleaved(band_interleaved_image):
+            # nrows, ncols, nchannels
             return np.transpose(band_interleaved_image, (1,2,0))
         def make_grid(tensor, ncols=10):
             nb_images = tensor.shape[0]
