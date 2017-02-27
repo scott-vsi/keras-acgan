@@ -45,7 +45,7 @@ import numpy as np
 
 np.random.seed(1337)
 
-K.set_image_dim_ordering('th')
+K.set_image_dim_ordering('tf')
 
 
 def build_generator(latent_size, is_pan=False, im_size=28):
@@ -60,7 +60,7 @@ def build_generator(latent_size, is_pan=False, im_size=28):
 
     cnn.add(Dense(1024, input_dim=latent_size, activation='relu'))
     cnn.add(Dense(128 * lowrez * lowrez, activation='relu'))
-    cnn.add(Reshape((128, lowrez, lowrez)))
+    cnn.add(Reshape((lowrez, lowrez, 128)))
 
     # upsample to (..., 14, 14)
     cnn.add(UpSampling2D(size=(2, 2)))
@@ -107,10 +107,10 @@ def build_discriminator(is_pan=False, im_size=28, nb_kernels=32):
 
     cnn = Sequential()
 
-    #cnn.add(GaussianNoise(0.12, input_shape=(nb_channels, im_size, im_size)))
+    #cnn.add(GaussianNoise(0.12, input_shape=(im_size, im_size, nb_channels)))
 
     cnn.add(Convolution2D(nb_kernels*1, 3, 3, border_mode='same', subsample=(2, 2),
-            input_shape=(nb_channels, im_size, im_size)))
+            input_shape=(im_size, im_size, nb_channels)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
@@ -136,7 +136,7 @@ def build_discriminator(is_pan=False, im_size=28, nb_kernels=32):
 
     cnn.add(Flatten())
 
-    image = Input(shape=(nb_channels, im_size, im_size))
+    image = Input(shape=(im_size, im_size, nb_channels))
 
     features = cnn(image)
 
@@ -194,7 +194,7 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False, im_size=56
     def make_band_interleaved(pixel_interleaved_image):
         # nimages, nrows, ncols, nchannels
         return np.transpose(pixel_interleaved_image, (0,3,1,2))
-    if not is_pan: X_train, X_test = map(make_band_interleaved, [X_train, X_test])
+    #if not is_pan: X_train, X_test = map(make_band_interleaved, [X_train, X_test])
 
     return (X_train, y_train), (X_test, y_test)
 
@@ -244,10 +244,10 @@ if __name__ == '__main__':
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
 
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-    if is_pan: X_train = np.expand_dims(X_train, axis=1)
+    if is_pan: X_train = np.expand_dims(X_train, axis=-1)
 
     X_test = (X_test.astype(np.float32) - 127.5) / 127.5
-    if is_pan: X_test = np.expand_dims(X_test, axis=1)
+    if is_pan: X_test = np.expand_dims(X_test, axis=-1)
 
     nb_train, nb_test = X_train.shape[0], X_test.shape[0]
 
@@ -384,12 +384,12 @@ if __name__ == '__main__':
                     mode='constant', constant_values=0)
             def make_col(images):
                 nb_images = images.shape[0]
-                return np.squeeze(np.concatenate(np.split(images, nb_images, axis=0), axis=2))
-            return np.concatenate([make_col(r) for r in np.split(tensor, ncols)], axis=-1)
+                return np.squeeze(np.concatenate(np.split(images, nb_images, axis=0), axis=1), axis=0)
+            return np.squeeze(np.concatenate([make_col(r) for r in np.split(tensor, ncols)], axis=1))
 
         # arrange them into a grid
         im_grid = make_grid((generated_images * 127.5 + 127.5).astype(np.uint8))
-        if not is_pan: im_grid = make_pixel_interleaved(im_grid)
+        #if not is_pan: im_grid = make_pixel_interleaved(im_grid)
 
         Image.fromarray(im_grid).save(
             'plot_epoch_{0:03d}_generated.png'.format(epoch))
