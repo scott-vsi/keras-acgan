@@ -376,8 +376,8 @@ if __name__ == '__main__':
             [noise, sampled_labels], verbose=0)
 
         def make_pixel_interleaved(band_interleaved_image):
-            # nrows, ncols, nchannels
-            return np.transpose(band_interleaved_image, (1,2,0))
+            # nimages, nrows, ncols, nchannels
+            return np.transpose(band_interleaved_image, (0,2,3,1))
         def make_grid(tensor, ncols=10):
             nb_images = tensor.shape[0]
             tensor = np.pad(tensor, pad_width=[(0,np.mod(nb_images, ncols))]+[(0,0)]*3,
@@ -388,8 +388,8 @@ if __name__ == '__main__':
             return np.squeeze(np.concatenate([make_col(r) for r in np.split(tensor, ncols)], axis=1))
 
         # arrange them into a grid
-        im_grid = make_grid((generated_images * 127.5 + 127.5).astype(np.uint8))
         #if not is_pan: im_grid = make_pixel_interleaved(im_grid)
+        im_grid = make_grid((generated_images * 127.5 + 127.5).astype(np.uint8))
 
         Image.fromarray(im_grid).save(
             'plot_epoch_{0:03d}_generated.png'.format(epoch))
