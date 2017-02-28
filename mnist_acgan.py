@@ -384,8 +384,9 @@ if __name__ == '__main__':
                     mode='constant', constant_values=0)
             def make_col(images):
                 nb_images = images.shape[0]
-                return np.squeeze(np.concatenate(np.split(images, nb_images, axis=0), axis=1), axis=0)
-            return np.squeeze(np.concatenate([make_col(r) for r in np.split(tensor, ncols)], axis=1))
+                return np.squeeze(np.hstack(np.split(images, nb_images, axis=0)), axis=0)
+            # REVIEW just do with a reshape
+            return np.squeeze(np.hstack([make_col(r) for r in np.split(tensor, ncols)]))
 
         # arrange them into a grid
         #if not is_pan: im_grid = make_pixel_interleaved(im_grid)
