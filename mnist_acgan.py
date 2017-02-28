@@ -65,11 +65,13 @@ def build_generator(latent_size, is_pan=False, im_size=28):
     # upsample to (..., 14, 14)
     cnn.add(UpSampling2D(size=(2, 2)))
     cnn.add(Convolution2D(256, 5, 5, border_mode='same', init='glorot_normal'))
+    cnn.add(BatchNormalization(axis=-1)) # set axis to normalize per feature map (channels axis)
     cnn.add(Activation('relu'))
 
     # upsample to (..., 28, 28)
     cnn.add(UpSampling2D(size=(2, 2)))
     cnn.add(Convolution2D(128, 5, 5, border_mode='same', init='glorot_normal'))
+    cnn.add(BatchNormalization(axis=-1)) # set axis to normalize per feature map (channels axis)
     cnn.add(Activation('relu'))
 
     # upsample to (..., 56, 56)
@@ -111,18 +113,22 @@ def build_discriminator(is_pan=False, im_size=28, nb_kernels=32):
 
     cnn.add(Convolution2D(nb_kernels*1, 3, 3, border_mode='same', subsample=(2, 2),
             input_shape=(im_size, im_size, nb_channels)))
+    # the paper does not include BN here
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
     cnn.add(Convolution2D(nb_kernels*2, 3, 3, border_mode='same', subsample=(1, 1)))
+    cnn.add(BatchNormalization(axis=-1)) # set axis to normalize per feature map (channels axis)
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
     cnn.add(Convolution2D(nb_kernels*4, 3, 3, border_mode='same', subsample=(2, 2)))
+    cnn.add(BatchNormalization(axis=-1)) # set axis to normalize per feature map (channels axis)
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
     cnn.add(Convolution2D(nb_kernels*8, 3, 3, border_mode='same', subsample=(1, 1)))
+    cnn.add(BatchNormalization(axis=-1)) # set axis to normalize per feature map (channels axis)
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
@@ -262,6 +268,8 @@ if __name__ == '__main__':
 
         epoch_gen_loss = []
         epoch_disc_loss = []
+
+        # TODO add shuffling
 
         for index in range(nb_batches):
             progress_bar.update(index)
