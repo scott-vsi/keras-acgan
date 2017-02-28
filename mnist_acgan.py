@@ -107,9 +107,10 @@ def build_discriminator(is_pan=False, im_size=28, nb_kernels=32):
 
     cnn = Sequential()
 
-    cnn.add(GaussianNoise(0.12, input_shape=(nb_channels, im_size, im_size)))
+    #cnn.add(GaussianNoise(0.12, input_shape=(nb_channels, im_size, im_size)))
 
-    cnn.add(Convolution2D(nb_kernels*1, 3, 3, border_mode='same', subsample=(2, 2)))
+    cnn.add(Convolution2D(nb_kernels*1, 3, 3, border_mode='same', subsample=(2, 2),
+            input_shape=(nb_channels, im_size, im_size)))
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
