@@ -30,6 +30,7 @@ import cPickle as pickle
 from PIL import Image
 
 from six.moves import range
+import argparse
 
 import keras.backend as K
 from keras.datasets import mnist
@@ -205,14 +206,19 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False, im_size=56
     return (X_train, y_train), (X_test, y_test)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--nb_epochs', type=int, help='number of training epochs, default=50', default=50)
+    parser.add_argument('--batch_size', type=int, help='number of images per batch, default=100', default=100)
+    parser.add_argument('--latent_size', type=int, help='size of the latent z vector, default=100', default=100)
+    parser.add_argument('--adam_lr', type=float, help='learning rate (Adam), default=0.00005', default=0.00005)
+    opt = parser.parse_args()
 
     # batch and latent size taken from the paper
-    nb_epochs = 50
-    batch_size = 100
-    latent_size = 100
-
+    nb_epochs = opt.nb_epochs
+    batch_size = opt.batch_size
+    latent_size = opt.latent_size
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
-    adam_lr = 0.00005
+    adam_lr = opt.adam_lr
     adam_beta_1 = 0.5
     is_pan = True
 
