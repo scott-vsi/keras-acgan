@@ -396,9 +396,11 @@ if __name__ == '__main__':
             nb_images = tensor.shape[0]
             tensor = np.pad(tensor, pad_width=[(0,np.mod(nb_images, ncols))]+[(0,0)]*3,
                     mode='constant', constant_values=0)
-            def make_col(images):
-                nb_images = images.shape[0]
-                return np.squeeze(np.hstack(np.split(images, nb_images, axis=0)), axis=0)
+            def vsplit_and_squeeze(tensor, indices_or_sections):
+                return [np.squeeze(im) for im in np.split(tensor, indices_or_sections)]
+            def make_col(tensor):
+                nb_images = tensor.shape[0]
+                return np.vstack(vsplit_and_squeeze(tensor, nb_images))
             # REVIEW just do with a reshape
             return np.squeeze(np.hstack([make_col(r) for r in np.split(tensor, ncols)]))
 
