@@ -189,8 +189,16 @@ def load_data(nb_images=None, nb_images_per_label=None, is_pan=False, im_size=56
     inds = np.random.permutation(len(filenames))[:nb_images]
     filenames, labels = [filenames[i] for i in inds], [labels[i] for i in inds]
 
+    def largest_square_crop(im):
+        height, width = im.shape[:2]
+        crop_size = min(width, height)
+        j = int(round((height - crop_size)/2.))
+        i = int(round((width  - crop_size)/2.))
+        return im[j:j+crop_size, i:i+crop_size]
+
     # silently requires Pillow...
     images = [misc.imread(f, mode='P' if is_pan else 'RGB') for f in filenames]
+    images = [largest_square_crop(im) for im in images]
     images = [misc.imresize(im, size=(im_size,im_size), interp='bicubic') for im in images]
 
     # requires numpy > 1.10
