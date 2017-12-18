@@ -22,6 +22,7 @@ Hardware           | Backend | Time / Epoch
 
 Consult https://github.com/lukedeo/keras-acgan for more information and
 example output
+Now added to https://github.com/fchollet/keras:examples/mnist_acgan.py
 """
 from __future__ import print_function
 
@@ -115,6 +116,7 @@ def build_discriminator(is_pan=False, im_size=28, nb_kernels=32):
     cnn.add(Convolution2D(nb_kernels*1, 3, 3, border_mode='same', subsample=(2, 2),
             input_shape=(im_size, im_size, nb_channels)))
     # the paper does not include BN here
+    # FIXME use slope and dropout rate from paper
     cnn.add(LeakyReLU())
     cnn.add(Dropout(0.3))
 
@@ -295,6 +297,7 @@ if __name__ == '__main__':
             label_batch = y_train[index * batch_size:(index + 1) * batch_size]
 
             # sample some labels from p_c
+            # REVIEW just re-use label_batch
             sampled_labels = np.random.randint(0, 10, batch_size)
 
             # generate a batch of fake images, using the generated labels as a
@@ -303,6 +306,11 @@ if __name__ == '__main__':
             # layer as a length one sequence
             generated_images = generator.predict(
                 [noise, sampled_labels.reshape((-1, 1))], verbose=0)
+
+            # REVIEW https://github.com/soumith/ganhacks suggests keeping mini-batches pure;
+            # see https://github.com/tdeboissiere/DeepLearningImplementations:
+            #   WassersteinGAN/src/model/train_WGAN.py; also compiles the generator and
+            #   discriminator models a little more cleanly.
 
             X = np.concatenate((image_batch, generated_images))
             y = np.array([1] * batch_size + [0] * batch_size)
@@ -401,6 +409,8 @@ if __name__ == '__main__':
             # nimages, nrows, ncols, nchannels
             return np.transpose(band_interleaved_image, (0,2,3,1))
         def make_grid(tensor, ncols=10):
+            # tensor : N,H,W,C
+            # column-major
             nb_images = tensor.shape[0]
             tensor = np.pad(tensor, pad_width=[(0,np.mod(nb_images, ncols))]+[(0,0)]*3,
                     mode='constant', constant_values=0)
