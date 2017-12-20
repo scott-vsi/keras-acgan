@@ -411,8 +411,11 @@ if __name__ == '__main__':
         def make_grid(tensor, ncols=10):
             # tensor : N,H,W,C
             # column-major
+            #
+            # >>> tensor = np.ones((5,2,4,3)) * (1+np.reshape(np.arange(5), (-1,1,1,1)))/5.0
+            # >>> make_grid(tensor, ncols=3)
             nb_images = tensor.shape[0]
-            tensor = np.pad(tensor, pad_width=[(0,np.mod(nb_images, ncols))]+[(0,0)]*3,
+            tensor = np.pad(tensor, pad_width=[(0,np.mod(ncols - np.mod(nb_images, ncols), ncols))]+[(0,0)]*3,
                     mode='constant', constant_values=0)
             def make_col(tensor):
                 return np.vstack([im for im in tensor])
