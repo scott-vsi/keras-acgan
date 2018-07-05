@@ -234,6 +234,8 @@ if __name__ == '__main__':
 
     # build the discriminator
     discriminator = build_discriminator(is_pan=is_pan, im_size=28)
+    # i believe (this was a long time ago now) i was not getting great results;
+    # this may be why: https://stackoverflow.com/q/42081257
     discriminator.compile(
         optimizer=Adam(lr=adam_lr, beta_1=adam_beta_1),
         loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
